@@ -1,1 +1,1 @@
-console.log('Hello from main.js')
+export const a = 1
