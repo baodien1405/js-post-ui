@@ -3,6 +3,7 @@ import { setTextContent, truncateText } from './utils/common'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { getUlPagination } from './utils'
+import debounce from 'lodash.debounce'
 
 // to use fromNow function
 dayjs.extend(relativeTime)
@@ -37,6 +38,8 @@ function createPostElement(post) {
 }
 
 function renderPostList(postList) {
+  if (!Array.isArray(postList)) return
+
   const ulElement = document.getElementById('postList')
   if (!ulElement) return
 
@@ -75,11 +78,11 @@ async function handleFilterChange(filterName, filterValue) {
     // update query params
     const url = new URL(window.location)
     url.searchParams.set(filterName, filterValue)
+
+    if (filterName === 'tittle_like') url.searchParams.set('_page', 1)
+
     history.pushState({}, '', url)
 
-    // fetch API
-    // re-render post list
-    console.log('url.searchParams: ', url.searchParams.toString())
     const { data, pagination } = await postApi.getAll(url.searchParams)
     renderPostList(data)
     renderPagination(pagination)
@@ -139,10 +142,28 @@ function initURL() {
   history.pushState({}, '', url)
 }
 
+function initSearch() {
+  const searchInput = document.getElementById('searchInput')
+  if (!searchInput) return
+
+  // set default values from query params
+  // title_like
+  const queryParams = new URLSearchParams(window.location.search)
+  if (queryParams.get('title_like')) {
+    searchInput.value = queryParams.get('title_like')
+  }
+  const debounceSearch = debounce(
+    (event) => handleFilterChange('title_like', event.target.value),
+    500
+  )
+  searchInput.addEventListener('input', debounceSearch)
+}
+
 ;(async () => {
   try {
     // attach click event for links
     initPagination()
+    initSearch()
 
     // set default pagination (_page, _limit) on URL
     initURL()
